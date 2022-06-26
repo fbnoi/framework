@@ -5,7 +5,6 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -73,7 +72,6 @@ func ScanFolders(dirs ...string) (err error) {
 	for _, route := range routes {
 		sort.Sort(route.Filters)
 	}
-	log.Println(routes)
 	return nil
 }
 

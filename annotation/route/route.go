@@ -1,10 +1,19 @@
 package route
 
 import (
+	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
+)
+
+var (
+	routes     []*Route
+	filters    []*Filter
+	direct_rgx = regexp.MustCompile(`^@[a-zA-Z]+\([^\(\)]+\)$`)
+	osType     = os.Getenv("GOOS")
 )
 
 type Route struct {
@@ -41,6 +50,52 @@ func (fs *Filters) Swap(i, j int) {
 	tmp := (*fs)[i]
 	(*fs)[i] = (*fs)[j]
 	(*fs)[j] = tmp
+}
+
+func consumeRouteAnno(anno, dir, module string) error {
+	anno = strings.TrimSuffix(strings.TrimPrefix(anno, "@Route("), ")")
+	splits := strings.Split(anno, ",")
+	r := &Route{
+		Filters: &Filters{},
+	}
+	r.Path = splits[0]
+	for i := 1; i < len(splits); i++ {
+		str := strings.ReplaceAll(splits[i], " ", "")
+		kv := strings.Split(str, "=")
+		switch kv[0] {
+		case "name":
+			r.Name = kv[1]
+		case "methods":
+			r.Methods = strToArr(kv[1])
+		default:
+			return errors.Errorf("Unrecognized Route property %s", kv[0])
+		}
+	}
+	r.Package = resolvePackage(dir, module)
+
+	return nil
+}
+
+func consumeFilterAnno(anno, dir, module string) error {
+	anno = strings.TrimSuffix(strings.TrimPrefix(anno, "@Filter("), ")")
+
+	splits := strings.Split(anno, ",")
+	f := &Filter{}
+	f.Path = splits[0]
+
+	for i := 1; i < len(splits); i++ {
+		str := strings.ReplaceAll(splits[i], " ", "")
+		kv := strings.Split(str, "=")
+		switch kv[0] {
+		case "order":
+			f.Order, _ = strconv.Atoi(kv[1])
+		default:
+			return errors.Errorf("Unrecognized Filter property %s", kv[0])
+		}
+	}
+	f.Package = resolvePackage(dir, module)
+
+	return nil
 }
 
 // @Filter(/post/*, order=1)
@@ -98,4 +153,9 @@ func strToArr(str string) []string {
 	str = strings.TrimSuffix(strings.TrimPrefix(str, "["), "]")
 	str = strings.ReplaceAll(str, " ", "")
 	return strings.Split(str, ",")
+}
+
+func resolvePackage(dir, module string) string {
+	dir = strings.Trim(strings.TrimLeft(dir, "."), "/")
+	return module + "/" + dir
 }
