@@ -29,11 +29,11 @@ func main() {
 		log.Fatalf("expected %s, get %s", "/post/:id", r.Path)
 	}
 
-	if r.GetName() != "post_edit" {
-		log.Fatalf("expected %s, get %s", "post_edit", r.GetName())
+	if r.Name != "post_edit" {
+		log.Fatalf("expected %s, get %s", "post_edit", r.Name)
 	}
 
-	if !compareSlice(r.GetMethod(), []string{"POST"}) {
-		log.Fatalf("expected %s, get %s", "[POST]", r.GetMethod())
+	if !compareSlice(r.Methods, []string{"POST"}) {
+		log.Fatalf("expected %s, get %s", "[POST]", r.Methods)
 	}
 }

@@ -8,17 +8,39 @@ import (
 )
 
 type Route struct {
-	Path       string
-	Name       string
-	Methods    []string
-	HandleFunc string
-	Filters    []*Filter
+	Package string
+	Path    string
+	Name    string
+	Methods []string
+	Func    string
+	Filters *Filters
 }
 
+type Filters []*Filter
+
 type Filter struct {
-	Path  string
-	Func  string
-	Order int
+	Package string
+	Path    string
+	Func    string
+	Order   int
+}
+
+func (fs *Filters) Add(e *Filter) {
+	*fs = append(*fs, e)
+}
+
+func (fs *Filters) Len() int {
+	return len(*fs)
+}
+
+func (fs *Filters) Less(i, j int) bool {
+	return (*fs)[i].Order > (*fs)[j].Order
+}
+
+func (fs *Filters) Swap(i, j int) {
+	tmp := (*fs)[i]
+	(*fs)[i] = (*fs)[j]
+	(*fs)[j] = tmp
 }
 
 // @Filter(/post/*, order=1)
@@ -52,7 +74,9 @@ func ParseRoute(anno string) (*Route, error) {
 	anno = strings.TrimSuffix(strings.TrimPrefix(anno, "@Route("), ")")
 
 	splits := strings.Split(anno, ",")
-	r := &Route{}
+	r := &Route{
+		Filters: &Filters{},
+	}
 	r.Path = splits[0]
 	for i := 1; i < len(splits); i++ {
 		str := strings.ReplaceAll(splits[i], " ", "")

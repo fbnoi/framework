@@ -5,5 +5,5 @@ import (
 )
 
 func main() {
-	scanner.Scan("./example/controller/controller1.go")
+	scanner.ScanFolders("./example/controller/")
 }
