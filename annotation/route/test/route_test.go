@@ -3,7 +3,7 @@ package test
 import (
 	"testing"
 
-	"fbnoi.com/framework/annotation/direct/route"
+	"fbnoi.com/framework/annotation/route"
 )
 
 func compareSlice(arr1, arr2 []string) bool {
