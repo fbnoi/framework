@@ -16,13 +16,13 @@ func (t *TestBag) Add(i int) {
 
 func TestHandler(t *testing.T) {
 	var i = 0
-	handler.New[*int]().Then(func(i *int, fn handler.HandleFunc[*int]) {
+	handler.New[*int]().Then(func(i *int, fn func(*int)) {
 		*i = *i + 1
 		fn(i)
-	}).Then(func(i *int, fn handler.HandleFunc[*int]) {
+	}).Then(func(i *int, fn func(*int)) {
 		*i = *i + 2
 		fn(i)
-	}).Then(func(i *int, fn handler.HandleFunc[*int]) {
+	}).Then(func(i *int, fn func(*int)) {
 		*i = *i + 3
 		fn(i)
 	}).Handle(&i)

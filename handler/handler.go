@@ -6,22 +6,19 @@ func New[T any]() *Handler[T] {
 	}
 }
 
-type MD[T any] func(T, HandleFunc[T])
-type HandleFunc[T any] func(T)
-
 type Handler[T any] struct {
-	mds      []MD[T]
-	endpoint HandleFunc[T]
+	mds      []func(T, func(T))
+	endpoint func(T)
 
 	idx int
 }
 
-func (h *Handler[T]) Then(mds ...MD[T]) *Handler[T] {
+func (h *Handler[T]) Then(mds ...func(T, func(T))) *Handler[T] {
 	h.mds = append(h.mds, mds...)
 	return h
 }
 
-func (h *Handler[T]) Final(endpoint HandleFunc[T]) *Handler[T] {
+func (h *Handler[T]) Final(endpoint func(T)) *Handler[T] {
 	if h.endpoint != nil {
 		panic("endpoint already set")
 	}
@@ -33,18 +30,18 @@ func (h *Handler[T]) Handle(t T) {
 	h.nextHandleFunc()(t)
 }
 
-func (h *Handler[T]) nextHandleFunc() HandleFunc[T] {
+func (h *Handler[T]) nextHandleFunc() func(T) {
 	nextMd := h.nextMiddleware()
 	return func(t T) {
 		nextMd(t, h.nextHandleFunc())
 	}
 }
 
-func (h *Handler[T]) nextMiddleware() MD[T] {
+func (h *Handler[T]) nextMiddleware() func(T, func(T)) {
 	h.idx++
-	var md MD[T]
+	var md func(T, func(T))
 	if h.idx >= len(h.mds) {
-		md = func(_t T, fn HandleFunc[T]) {
+		md = func(_t T, fn func(T)) {
 			if h.endpoint != nil {
 				h.endpoint(_t)
 			}
