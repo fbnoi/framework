@@ -2,6 +2,7 @@ package main
 
 import (
 	"io"
+	"log"
 
 	"fbnoi.com/framework/net/http"
 )
@@ -25,5 +26,8 @@ func MD2(ctx *http.Context, next func(*http.Context)) {
 }
 
 func Index(ctx *http.Context) {
-	io.WriteString(ctx.ResponseWriter, "hello world\r\n")
+	log.Println("main.index")
+	io.WriteString(ctx.ResponseWriter, "----------------------\r\n")
+	io.WriteString(ctx.ResponseWriter, ctx.Get("q[person][id]"))
+	io.WriteString(ctx.ResponseWriter, "----------------------\r\n")
 }

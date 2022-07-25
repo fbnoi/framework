@@ -10,16 +10,27 @@ import (
 	"github.com/pkg/errors"
 )
 
+var (
+	_default_memory  int64 = 2 * 1024 * 1024
+	_default_timeout int64 = 10000
+)
+
 func DefaultEngine() *Engine {
 	return &Engine{
 		router: httprouter.NewRouteTree(&httprouter.Config{RedirectFixedPath: true}),
 	}
 }
 
+type Config struct {
+	MaxMemory int64
+	TimeOut   int64
+}
+
 type Engine struct {
 	server *http.Server
 
 	router *httprouter.RouteTree
+	config *Config
 }
 
 func (e *Engine) Run(port string) (err error) {
@@ -35,15 +46,6 @@ func (e *Engine) Run(port string) (err error) {
 		return errors.Wrapf(err, "port: %v", port)
 	}
 	return nil
-}
-
-func (e *Engine) context(r *http.Request, w http.ResponseWriter, ps httprouter.Params) *Context {
-	return &Context{
-		Request:        r,
-		ResponseWriter: w,
-		Engine:         e,
-		RouteParams:    ps,
-	}
 }
 
 func resolveAddr(port string) string {

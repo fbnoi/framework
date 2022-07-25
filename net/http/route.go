@@ -1,7 +1,10 @@
 package http
 
 import (
+	"context"
 	"net/http"
+	"strings"
+	"time"
 
 	"fbnoi.com/framework/handler"
 	"fbnoi.com/httprouter"
@@ -52,4 +55,33 @@ func (e *Engine) handle(name, method, path string, fn HandleFunc, mds ...MD) *En
 	})
 
 	return e
+}
+
+func (e *Engine) context(r *http.Request, w http.ResponseWriter, ps httprouter.Params) *Context {
+
+	contentType := r.Header.Get("Content-Type")
+	if strings.Contains(contentType, "multipart/form-data") {
+		r.ParseMultipartForm(_default_memory)
+	} else {
+		r.ParseForm()
+	}
+
+	// var cancel func()
+
+	t := time.Duration(e.config.TimeOut)
+
+	if tr := timeout(r); tr < t && tr > 0 {
+		t = tr
+	}
+
+	if t > 0 {
+		c.Context, cancel = context.WithTimeout(ctx, tm)
+	}
+
+	return &Context{
+		Request:        r,
+		ResponseWriter: w,
+		Engine:         e,
+		RouteParams:    ps,
+	}
 }
