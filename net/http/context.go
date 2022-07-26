@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"strings"
@@ -9,10 +10,9 @@ import (
 	"fbnoi.com/httprouter"
 )
 
-type HandleFunc func(*Context)
-type MD func(*Context, func(*Context))
-
 type Context struct {
+	context.Context
+
 	Request        *http.Request
 	ResponseWriter http.ResponseWriter
 	Engine         *Engine

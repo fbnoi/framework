@@ -18,6 +18,7 @@ var (
 func DefaultEngine() *Engine {
 	return &Engine{
 		router: httprouter.NewRouteTree(&httprouter.Config{RedirectFixedPath: true}),
+		config: &Config{_default_memory, _default_timeout},
 	}
 }
 

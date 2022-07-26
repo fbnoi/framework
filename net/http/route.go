@@ -6,59 +6,57 @@ import (
 	"strings"
 	"time"
 
-	"fbnoi.com/framework/handler"
+	"fbnoi.com/handler"
 	"fbnoi.com/httprouter"
 )
 
-func (e *Engine) GET(name, path string, fn HandleFunc, mds ...MD) *Engine {
-	return e.handle(name, "GET", path, fn, mds...)
+func (e *Engine) GET(name, path string, fn func(*Context), mds ...func(*Context, func(*Context))) *Engine {
+	return e.Handle(name, "GET", path, fn, mds...)
 }
 
-func (e *Engine) POST(name, path string, fn HandleFunc, mds ...MD) *Engine {
-	return e.handle(name, "POST", path, fn, mds...)
+func (e *Engine) POST(name, path string, fn func(*Context), mds ...func(*Context, func(*Context))) *Engine {
+	return e.Handle(name, "POST", path, fn, mds...)
 }
 
-func (e *Engine) HEAD(name, path string, fn HandleFunc, mds ...MD) *Engine {
-	return e.handle(name, "HEAD", path, fn, mds...)
+func (e *Engine) HEAD(name, path string, fn func(*Context), mds ...func(*Context, func(*Context))) *Engine {
+	return e.Handle(name, "HEAD", path, fn, mds...)
 }
 
-func (e *Engine) PUT(name, path string, fn HandleFunc, mds ...MD) *Engine {
-	return e.handle(name, "PUT", path, fn, mds...)
+func (e *Engine) PUT(name, path string, fn func(*Context), mds ...func(*Context, func(*Context))) *Engine {
+	return e.Handle(name, "PUT", path, fn, mds...)
 }
 
-func (e *Engine) PATCH(name, path string, fn HandleFunc, mds ...MD) *Engine {
-	return e.handle(name, "PATCH", path, fn, mds...)
+func (e *Engine) PATCH(name, path string, fn func(*Context), mds ...func(*Context, func(*Context))) *Engine {
+	return e.Handle(name, "PATCH", path, fn, mds...)
 }
 
-func (e *Engine) DELETE(name, path string, fn HandleFunc, mds ...MD) *Engine {
-	return e.handle(name, "DELETE", path, fn, mds...)
+func (e *Engine) DELETE(name, path string, fn func(*Context), mds ...func(*Context, func(*Context))) *Engine {
+	return e.Handle(name, "DELETE", path, fn, mds...)
 }
 
-func (e *Engine) All(name, path string, fn HandleFunc, mds ...MD) *Engine {
+func (e *Engine) All(name, path string, fn func(*Context), mds ...func(*Context, func(*Context))) *Engine {
+	h := wrapHandler(fn, mds...)
 	e.router.All(name, path, func(r *http.Request, w http.ResponseWriter, ps httprouter.Params) {
-		h := handler.New[*Context]()
-		for _, md := range mds {
-			h.Then(md)
-		}
-		h.Final(fn).Handle(e.context(r, w, ps))
+		e.handle(r, w, ps, h)
 	})
+
 	return e
 }
 
-func (e *Engine) handle(name, method, path string, fn HandleFunc, mds ...MD) *Engine {
+func (e *Engine) Handle(name, method, path string, fn func(*Context), mds ...func(*Context, func(*Context))) *Engine {
+	h := wrapHandler(fn, mds...)
 	e.router.Handle(name, method, path, func(r *http.Request, w http.ResponseWriter, ps httprouter.Params) {
-		h := handler.New[*Context]()
-		for _, md := range mds {
-			h.Then(md)
-		}
-		h.Final(fn).Handle(e.context(r, w, ps))
+		e.handle(r, w, ps, h)
 	})
 
 	return e
 }
 
-func (e *Engine) context(r *http.Request, w http.ResponseWriter, ps httprouter.Params) *Context {
+func wrapHandler(fn func(*Context), mds ...func(*Context, func(*Context))) *handler.Handler[*Context] {
+	return handler.New[*Context]().Then(mds...).Final(fn)
+}
 
+func (e *Engine) handle(r *http.Request, w http.ResponseWriter, ps httprouter.Params, h *handler.Handler[*Context]) {
 	contentType := r.Header.Get("Content-Type")
 	if strings.Contains(contentType, "multipart/form-data") {
 		r.ParseMultipartForm(_default_memory)
@@ -66,22 +64,28 @@ func (e *Engine) context(r *http.Request, w http.ResponseWriter, ps httprouter.P
 		r.ParseForm()
 	}
 
-	// var cancel func()
+	ct := time.Duration(e.config.TimeOut)
 
-	t := time.Duration(e.config.TimeOut)
-
-	if tr := timeout(r); tr < t && tr > 0 {
-		t = tr
+	if t := timeout(r); t < ct && t > 0 {
+		ct = t
 	}
 
-	if t > 0 {
-		c.Context, cancel = context.WithTimeout(ctx, tm)
-	}
-
-	return &Context{
+	var cancel func()
+	ctx := &Context{
 		Request:        r,
 		ResponseWriter: w,
 		Engine:         e,
 		RouteParams:    ps,
 	}
+
+	if ct > 0 {
+		ctx.Context, cancel = context.WithTimeout(context.Background(), ct)
+	} else {
+		ctx.Context, cancel = context.WithCancel(context.Background())
+	}
+
+	defer cancel()
+
+	h.Handle(ctx)
+
 }
