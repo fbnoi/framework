@@ -57,19 +57,20 @@ func wrapHandler(fn func(*Context), mds ...func(*Context, func(*Context))) *hand
 }
 
 func (e *Engine) handle(r *http.Request, w http.ResponseWriter, ps httprouter.Params, h *handler.Handler[*Context]) {
+	conf := e.config()
+	rConf, ok := e.routeConfig(ps.GetRoute().RouteName())
+
+	mem, t := conf.MaxMemory, conf.TimeOut
+	if ok {
+		mem, t = rConf.MaxMemory, rConf.TimeOut
+	}
 	contentType := r.Header.Get("Content-Type")
 	if strings.Contains(contentType, "multipart/form-data") {
-		r.ParseMultipartForm(_default_memory)
+		r.ParseMultipartForm(mem)
 	} else {
 		r.ParseForm()
 	}
-
-	ct := time.Duration(e.config.TimeOut)
-
-	if t := timeout(r); t < ct && t > 0 {
-		ct = t
-	}
-
+	ct := time.Duration(t)
 	var cancel func()
 	ctx := &Context{
 		Request:        r,
@@ -77,15 +78,11 @@ func (e *Engine) handle(r *http.Request, w http.ResponseWriter, ps httprouter.Pa
 		Engine:         e,
 		RouteParams:    ps,
 	}
-
 	if ct > 0 {
 		ctx.Context, cancel = context.WithTimeout(context.Background(), ct)
 	} else {
 		ctx.Context, cancel = context.WithCancel(context.Background())
 	}
-
 	defer cancel()
-
 	h.Handle(ctx)
-
 }
