@@ -16,8 +16,8 @@ func timeout(r *http.Request) time.Duration {
 	timeout, err := strconv.ParseInt(t, 10, 64)
 
 	if err != nil {
-		timeout = _default_timeout
+		return _default_timeout
 	}
 
-	return time.Duration(timeout)
+	return time.Duration(timeout * int64(time.Millisecond))
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"strings"
-	"time"
 
 	"fbnoi.com/handler"
 	"fbnoi.com/httprouter"
@@ -70,7 +69,6 @@ func (e *Engine) handle(r *http.Request, w http.ResponseWriter, ps httprouter.Pa
 	} else {
 		r.ParseForm()
 	}
-	ct := time.Duration(t)
 	var cancel func()
 	ctx := &Context{
 		Request:        r,
@@ -78,11 +76,12 @@ func (e *Engine) handle(r *http.Request, w http.ResponseWriter, ps httprouter.Pa
 		Engine:         e,
 		RouteParams:    ps,
 	}
-	if ct > 0 {
-		ctx.Context, cancel = context.WithTimeout(context.Background(), ct)
+	if t > 0 {
+		ctx.Context, cancel = context.WithTimeout(context.Background(), t)
 	} else {
 		ctx.Context, cancel = context.WithCancel(context.Background())
 	}
 	defer cancel()
+
 	h.Handle(ctx)
 }

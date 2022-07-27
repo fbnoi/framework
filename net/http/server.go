@@ -8,14 +8,15 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"fbnoi.com/httprouter"
 	"github.com/pkg/errors"
 )
 
 var (
-	_default_memory  int64 = 2 << 20
-	_default_timeout int64 = 10000
+	_default_memory  int64         = 2 << 20
+	_default_timeout time.Duration = 1 * time.Second
 )
 
 func DefaultEngine() *Engine {
@@ -27,7 +28,7 @@ func DefaultEngine() *Engine {
 
 type Config struct {
 	MaxMemory int64
-	TimeOut   int64
+	TimeOut   time.Duration
 }
 
 type Engine struct {
