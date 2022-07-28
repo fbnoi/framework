@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"fbnoi.com/framework/net/http/binding"
+	"fbnoi.com/framework/net/http/render"
 	"fbnoi.com/httprouter"
 )
 
@@ -17,6 +18,49 @@ type Context struct {
 	ResponseWriter http.ResponseWriter
 	Engine         *Engine
 	RouteParams    httprouter.Params
+
+	Error error
+}
+
+func (ctx *Context) JSON(j *render.JSON, code int) {
+	writeStatus(ctx.ResponseWriter, code)
+	ctx.Error = j.Render(ctx.ResponseWriter)
+}
+
+func (ctx *Context) XML(d any, code int) {
+	writeStatus(ctx.ResponseWriter, code)
+	x := render.XML{Data: d}
+	ctx.Error = x.Render(ctx.ResponseWriter)
+}
+
+func (ctx *Context) String(code int, format string, values ...interface{}) {
+	writeStatus(ctx.ResponseWriter, code)
+	s := render.String{Format: format, Data: values}
+	ctx.Error = s.Render(ctx.ResponseWriter)
+}
+
+func (ctx *Context) Bytes(code int, contentType string, data ...[]byte) {
+	writeStatus(ctx.ResponseWriter, code)
+	d := render.Data{
+		ContentType: contentType,
+		Data:        data,
+	}
+	ctx.Error = d.Render(ctx.ResponseWriter)
+}
+
+func (ctx *Context) Redirect(code int, location string) {
+	writeStatus(ctx.ResponseWriter, code)
+	r := render.Redirect{
+		Code:     code,
+		Location: location,
+		Request:  ctx.Request,
+	}
+	ctx.Error = r.Render(ctx.ResponseWriter)
+}
+
+func (ctx *Context) RedirectToRoute(code int, name string, ps httprouter.Params) {
+	url := ctx.Engine.router.GeneratePath(name, ps)
+	ctx.Redirect(code, url)
 }
 
 func (ctx *Context) Post(name string) string {
@@ -83,4 +127,8 @@ func (ctx *Context) Bind(obj any) error {
 
 func (ctx *Context) BindWith(obj any, b binding.BindingInterface) error {
 	return b.Bind(ctx.Request, obj)
+}
+
+func writeStatus(w http.ResponseWriter, code int) {
+	w.WriteHeader(code)
 }
